@@ -14,7 +14,8 @@ import {
     onSnapshot,
     query,
     doc,
-    deleteDoc
+    setDoc,
+    where
 } from "firebase/firestore";
 
 import database from '../../config/firebaseConfig';
@@ -28,19 +29,33 @@ export default function Task({ navigation }) {
     const [task, SetTask] = useState([])
 
     async function getData() {
-        const q = query(collection(database, "Tasks"))
+        const q = query(collection(database, "Tasks"), where("status", "==", true))
 
         const unsubscribe = onSnapshot(q, (querySnapshot) => {
             const list = []
             querySnapshot.forEach((doc) => {
                 list.push({ ...doc.data(), id: doc.id })
             });
-            SetTask(list)
+            SetTask(list.sort((a, b) => {
+                if (a.description > b.description) {
+                    return 1;
+                }
+                if (a.description < b.description) {
+                    return -1;
+                }
+                // a must be equal to b
+                return 0;
+
+            }))
         })
     }
 
-    async function deleteTask(id) {
-        await deleteDoc(doc(database, "Tasks", id))
+    async function deleteTask(id, description) {
+        // await deleteDoc(doc(database, "Tasks", id))
+        await setDoc(doc(database, "Tasks", id), {
+            description: description,
+            status: false
+        })
     }
 
     useEffect(() => {
@@ -61,7 +76,7 @@ export default function Task({ navigation }) {
                                 style={styles.deleteTask}
                                 activeOpacity={0.6}
                                 onPress={() => {
-                                    deleteTask(item.id)
+                                    deleteTask(item.id, item.description)
                                 }}
                             >
                                 <FontAwesome
